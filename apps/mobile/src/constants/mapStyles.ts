@@ -1,4 +1,5 @@
-export const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+export const MAP_STYLE_URL =
+  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 export const DEFAULT_CENTER = {
   latitude: -22.9068,

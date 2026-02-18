@@ -1,4 +1,4 @@
-import { View } from "react-native";
+import { View, Platform, StyleSheet } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
@@ -6,7 +6,7 @@ import { Colors } from "@/constants/theme";
 
 export default function TabsLayout() {
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.root}>
       <OfflineBanner />
       <Tabs
         screenOptions={{
@@ -16,11 +16,36 @@ export default function TabsLayout() {
           tabBarStyle: {
             backgroundColor: Colors.surface,
             borderTopColor: Colors.border,
+            borderTopWidth: 1,
+            height: Platform.OS === "ios" ? 88 : 64,
+            paddingTop: 8,
+            paddingBottom: Platform.OS === "ios" ? 28 : 8,
+            shadowColor: Colors.primary,
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 10,
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: "600",
+            letterSpacing: 0.5,
+          },
+          tabBarItemStyle: {
+            paddingVertical: 2,
           },
           headerStyle: {
-            backgroundColor: Colors.surface,
+            backgroundColor: Colors.background,
+            shadowColor: Colors.primary,
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 4,
           },
           headerTintColor: Colors.text,
+          headerTitleStyle: {
+            fontWeight: "bold",
+            letterSpacing: 1,
+          },
         }}
       >
         <Tabs.Screen
@@ -74,3 +99,10 @@ export default function TabsLayout() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+});
