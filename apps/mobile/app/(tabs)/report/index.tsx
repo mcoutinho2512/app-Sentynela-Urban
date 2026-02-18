@@ -19,24 +19,12 @@ import { uploadsApi } from "@/api/uploads";
 import { getCurrentLocation } from "@/utils/permissions";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Colors, Spacing, FontSize, BorderRadius } from "@/constants/theme";
-
-const INCIDENT_TYPES = [
-  { value: "alagamento", label: "Alagamento" },
-  { value: "tiroteio", label: "Tiroteio" },
-  { value: "assalto", label: "Assalto" },
-  { value: "acidente", label: "Acidente" },
-  { value: "incendio", label: "Incendio" },
-  { value: "queda_arvore", label: "Queda de Arvore" },
-  { value: "buraco", label: "Buraco" },
-  { value: "deslizamento", label: "Deslizamento" },
-  { value: "outros", label: "Outros" },
-];
+import { Colors, Spacing, FontSize, BorderRadius, SeverityColors, INCIDENT_TYPES } from "@/constants/theme";
 
 const SEVERITIES = [
-  { value: "baixa", label: "Baixa", color: "#06d6a0" },
-  { value: "media", label: "Media", color: "#ffd166" },
-  { value: "alta", label: "Alta", color: "#ef476f" },
+  { value: "baixa", label: "Baixa", color: SeverityColors.baixa },
+  { value: "media", label: "Media", color: SeverityColors.media },
+  { value: "alta", label: "Alta", color: SeverityColors.alta },
 ];
 
 const reportSchema = z.object({
@@ -124,6 +112,11 @@ export default function ReportScreen() {
             ]}
             onPress={() => setValue("type", type.value)}
           >
+            <Ionicons
+              name={type.icon as any}
+              size={16}
+              color={selectedType === type.value ? "#fff" : Colors.textSecondary}
+            />
             <Text
               style={[
                 styles.chipText,
@@ -208,6 +201,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: FontSize.lg, fontWeight: "600", color: Colors.text, marginTop: Spacing.sm },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
   chip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full, backgroundColor: Colors.surface,
     borderWidth: 1, borderColor: Colors.border,

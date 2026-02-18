@@ -76,17 +76,35 @@ export const SeverityGlowColors: Record<string, string> = {
   alta: "rgba(255, 51, 102, 0.5)",
 };
 
-export const IncidentTypeIcons: Record<string, string> = {
-  alagamento: "water",
-  tiroteio: "alert-circle",
-  assalto: "shield-checkmark",
-  acidente: "car-sport",
-  incendio: "flame",
-  queda_arvore: "leaf",
-  buraco: "warning",
-  deslizamento: "trending-down",
-  outros: "help-circle",
-};
+export interface IncidentType {
+  value: string;
+  label: string;
+  icon: string;
+}
+
+export const INCIDENT_TYPES: IncidentType[] = [
+  { value: "alagamento", label: "Alagamento", icon: "water" },
+  { value: "tiroteio", label: "Tiroteio", icon: "alert-circle" },
+  { value: "assalto", label: "Assalto", icon: "hand-left" },
+  { value: "acidente", label: "Acidente", icon: "car-sport" },
+  { value: "incendio", label: "Incendio", icon: "flame" },
+  { value: "policia", label: "Policia", icon: "shield-half" },
+  { value: "perigo", label: "Perigo", icon: "skull" },
+  { value: "lixo", label: "Lixo", icon: "trash" },
+  { value: "obras", label: "Obras", icon: "construct" },
+  { value: "queda_arvore", label: "Queda de Arvore", icon: "leaf" },
+  { value: "buraco", label: "Buraco", icon: "warning" },
+  { value: "deslizamento", label: "Deslizamento", icon: "trending-down" },
+  { value: "falta_luz", label: "Falta de Luz", icon: "flash-off" },
+  { value: "falta_agua", label: "Falta de Agua", icon: "water-outline" },
+  { value: "animal", label: "Animal na Via", icon: "paw" },
+  { value: "manifestacao", label: "Manifestacao", icon: "megaphone" },
+  { value: "outros", label: "Outros", icon: "help-circle" },
+];
+
+export const IncidentTypeIcons: Record<string, string> = Object.fromEntries(
+  INCIDENT_TYPES.map((t) => [t.value, t.icon])
+);
 
 export const Shadows = {
   glow: {
