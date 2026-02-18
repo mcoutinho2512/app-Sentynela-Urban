@@ -1,0 +1,83 @@
+{
+  "expo": {
+    "name": "Urban Assistant",
+    "slug": "urban-assistant",
+    "version": "1.0.0",
+    "scheme": "urban-assistant",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.urbanassistant.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Precisamos da sua localizacao para mostrar incidentes proximos e calcular rotas.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Precisamos da sua localizacao para enviar alertas de incidentes proximos.",
+        "NSCameraUsageDescription": "Precisamos da camera para fotografar incidentes.",
+        "NSPhotoLibraryUsageDescription": "Precisamos acessar suas fotos para anexar a relatos de incidentes."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "package": "com.urbanassistant.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Precisamos da sua localizacao para mostrar incidentes proximos e enviar alertas."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Precisamos da camera para fotografar incidentes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Precisamos acessar suas fotos para anexar a relatos de incidentes."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#4361ee",
+          "icon": "./assets/notification-icon.png"
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "@maplibre/maplibre-react-native"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_PROJECT_ID"
+      }
+    }
+  }
+}

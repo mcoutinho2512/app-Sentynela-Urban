@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(node --version:*)",
+      "Bash(npx --version:*)",
+      "Bash(docker compose exec:*)",
+      "Bash(docker compose up:*)",
+      "Bash(curl:*)",
+      "Bash(fc-list:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(ls:*)",
+      "Bash(npm install)",
+      "Bash(npx tsc:*)",
+      "Bash(npx expo export:*)",
+      "Bash(npx expo install:*)",
+      "Bash(node -e:*)",
+      "Bash(java --version:*)",
+      "Bash(lsof:*)",
+      "Bash(docker compose:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git fetch:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git rm:*)"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+export const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+
+export const DEFAULT_CENTER = {
+  latitude: -22.9068,
+  longitude: -43.1729,
+};
+
+export const DEFAULT_ZOOM = 13;

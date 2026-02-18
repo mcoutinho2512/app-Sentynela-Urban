@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: urbanapp
+      POSTGRES_USER: urbanapp
+      POSTGRES_PASSWORD: urbanapp_secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urbanapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://urbanapp:urbanapp_secret@db:5432/urbanapp
+      DATABASE_URL_SYNC: postgresql://urbanapp:urbanapp_secret@db:5432/urbanapp
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      OPENROUTESERVICE_API_KEY: ""
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:8081","http://localhost:19006"]'
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../apps/api:/app
+      - api_uploads:/app/uploads
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  celery_worker:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://urbanapp:urbanapp_secret@db:5432/urbanapp
+      DATABASE_URL_SYNC: postgresql://urbanapp:urbanapp_secret@db:5432/urbanapp
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev-jwt-secret-change-in-production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../apps/api:/app
+    command: celery -A app.tasks.celery_app worker --loglevel=info --beat
+
+volumes:
+  pgdata:
+  api_uploads:
