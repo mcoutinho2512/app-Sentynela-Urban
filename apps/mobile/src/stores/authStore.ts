@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { authApi, UserResponse } from "@/api/auth";
+import { apiClient } from "@/api/client";
 import { setTokens, clearTokens, getAccessToken } from "@/utils/tokenStorage";
 
 interface AuthState {
@@ -10,6 +11,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (data: Partial<Pick<UserResponse, "name" | "avatar_url">>) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -49,5 +51,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     await clearTokens();
     set({ isAuthenticated: false, user: null });
+  },
+
+  updateUser: async (data) => {
+    const res = await apiClient.patch<UserResponse>("/users/me", data);
+    set({ user: res.data });
   },
 }));
