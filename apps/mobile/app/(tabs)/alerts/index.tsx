@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { alertsApi } from "@/api/alerts";
+import { getCurrentLocation } from "@/utils/permissions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Colors, Spacing, FontSize, BorderRadius, SeverityColors } from "@/constants/theme";
@@ -18,11 +19,7 @@ import { Colors, Spacing, FontSize, BorderRadius, SeverityColors } from "@/const
 export default function AlertsScreen() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [mode, setMode] = useState<"radius" | "neighborhood">("radius");
-  const [centerLat, setCenterLat] = useState("");
-  const [centerLon, setCenterLon] = useState("");
   const [radiusKm, setRadiusKm] = useState("2");
-  const [neighborhoodName, setNeighborhoodName] = useState("");
   const [minSeverity, setMinSeverity] = useState("baixa");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -60,13 +57,17 @@ export default function AlertsScreen() {
     },
   });
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    const loc = await getCurrentLocation();
+    if (!loc) {
+      Alert.alert("Erro", "Nao foi possivel obter sua localizacao");
+      return;
+    }
     createPref.mutate({
-      mode,
-      center_lat: mode === "radius" ? parseFloat(centerLat) : undefined,
-      center_lon: mode === "radius" ? parseFloat(centerLon) : undefined,
-      radius_km: mode === "radius" ? parseFloat(radiusKm) : undefined,
-      neighborhood_name: mode === "neighborhood" ? neighborhoodName : undefined,
+      mode: "radius",
+      center_lat: loc.coords.latitude,
+      center_lon: loc.coords.longitude,
+      radius_km: parseFloat(radiusKm) || 2,
       min_severity: minSeverity,
       enabled: true,
     });
@@ -79,6 +80,12 @@ export default function AlertsScreen() {
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h atras`;
     return `${Math.floor(hours / 24)}d atras`;
+  };
+
+  const severityLabel: Record<string, string> = {
+    baixa: "Baixa",
+    media: "Media",
+    alta: "Alta",
   };
 
   return (
@@ -103,9 +110,11 @@ export default function AlertsScreen() {
           <View key={pref.id} style={styles.prefCard}>
             <View style={styles.prefInfo}>
               <Text style={styles.prefMode}>
-                {pref.mode === "radius" ? `Raio: ${pref.radius_km}km` : pref.neighborhood_name}
+                Raio: {pref.radius_km}km
               </Text>
-              <Text style={styles.prefDetail}>Severidade min: {pref.min_severity}</Text>
+              <Text style={styles.prefDetail}>
+                Severidade minima: {severityLabel[pref.min_severity] || pref.min_severity}
+              </Text>
             </View>
             <TouchableOpacity onPress={() => deletePref.mutate(pref.id)}>
               <Ionicons name="trash" size={20} color={Colors.danger} />
@@ -115,63 +124,28 @@ export default function AlertsScreen() {
 
         {showForm && (
           <View style={styles.form}>
-            <View style={styles.modeToggle}>
-              <Button
-                title="Raio"
-                onPress={() => setMode("radius")}
-                variant={mode === "radius" ? "primary" : "outline"}
-                compact
-              />
-              <Button
-                title="Bairro"
-                onPress={() => setMode("neighborhood")}
-                variant={mode === "neighborhood" ? "primary" : "outline"}
-                compact
-              />
-            </View>
+            <Text style={styles.formHint}>
+              O alerta sera criado com base na sua localizacao atual
+            </Text>
 
-            {mode === "radius" ? (
-              <>
-                <View style={styles.row}>
-                  <Input
-                    label="Lat"
-                    value={centerLat}
-                    onChangeText={setCenterLat}
-                    keyboardType="numeric"
-                    style={styles.halfInput}
-                  />
-                  <Input
-                    label="Lon"
-                    value={centerLon}
-                    onChangeText={setCenterLon}
-                    keyboardType="numeric"
-                    style={styles.halfInput}
-                  />
-                </View>
-                <Input
-                  label="Raio (km)"
-                  value={radiusKm}
-                  onChangeText={setRadiusKm}
-                  keyboardType="numeric"
-                />
-              </>
-            ) : (
-              <Input
-                label="Nome do Bairro"
-                value={neighborhoodName}
-                onChangeText={setNeighborhoodName}
-              />
-            )}
+            <Input
+              label="Raio (km)"
+              value={radiusKm}
+              onChangeText={setRadiusKm}
+              keyboardType="numeric"
+              placeholder="Ex: 2"
+            />
 
             <Text style={styles.label}>Severidade minima</Text>
             <View style={styles.chips}>
-              {["baixa", "media", "alta"].map((s) => (
+              {(["baixa", "media", "alta"] as const).map((s) => (
                 <TouchableOpacity
                   key={s}
                   style={[
                     styles.chip,
+                    { borderColor: SeverityColors[s] },
                     minSeverity === s && {
-                      backgroundColor: SeverityColors[s as keyof typeof SeverityColors],
+                      backgroundColor: SeverityColors[s],
                     },
                   ]}
                   onPress={() => setMinSeverity(s)}
@@ -179,10 +153,11 @@ export default function AlertsScreen() {
                   <Text
                     style={[
                       styles.chipText,
+                      { color: SeverityColors[s] },
                       minSeverity === s && { color: "#fff" },
                     ]}
                   >
-                    {s}
+                    {severityLabel[s]}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -266,19 +241,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  modeToggle: { flexDirection: "row", gap: Spacing.sm },
-  row: { flexDirection: "row", gap: Spacing.sm },
-  halfInput: { flex: 1 },
+  formHint: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    fontStyle: "italic",
+  },
   label: { fontSize: FontSize.sm, fontWeight: "500", color: Colors.text },
   chips: { flexDirection: "row", gap: Spacing.sm },
   chip: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
   },
-  chipText: { fontSize: FontSize.sm, color: Colors.text, textTransform: "capitalize" },
+  chipText: { fontSize: FontSize.sm, fontWeight: "600" },
   emptyState: { alignItems: "center", gap: Spacing.xs, paddingVertical: Spacing.lg },
   empty: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: "center" },
   emptyHint: { fontSize: FontSize.sm, color: Colors.border, textAlign: "center" },
