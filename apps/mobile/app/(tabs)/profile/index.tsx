@@ -19,6 +19,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { locationsApi } from "@/api/locations";
 import { uploadsApi } from "@/api/uploads";
 import { apiClient } from "@/api/client";
+import { getCurrentLocation } from "@/utils/permissions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/constants/theme";
@@ -133,7 +134,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  // --- Address search (Nominatim) ---
+  // --- Address search (Nominatim with location bias) ---
   const searchAddress = async (query: string) => {
     setAddressQuery(query);
     setSelectedAddress(null);
@@ -148,8 +149,18 @@ export default function ProfileScreen() {
     searchTimeout.current = setTimeout(async () => {
       setSearching(true);
       try {
+        // Get user location for proximity bias
+        let locationParams = "";
+        const loc = await getCurrentLocation();
+        if (loc) {
+          const lat = loc.coords.latitude;
+          const lon = loc.coords.longitude;
+          const delta = 1.5; // ~150km radius
+          locationParams = `&viewbox=${lon - delta},${lat + delta},${lon + delta},${lat - delta}&bounded=0`;
+        }
+
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=br`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=br${locationParams}`,
           { headers: { "User-Agent": "SentynelaUrban/1.0" } }
         );
         const data: GeoResult[] = await res.json();
