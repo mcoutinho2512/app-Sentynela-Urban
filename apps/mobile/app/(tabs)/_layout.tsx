@@ -49,12 +49,12 @@ export default function TabsLayout() {
         }}
       >
         <Tabs.Screen
-          name="map"
+          name="profile"
           options={{
-            title: "Mapa",
+            title: "Perfil",
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="map" size={size} color={color} />
+              <Ionicons name="person" size={size} color={color} />
             ),
           }}
         />
@@ -86,12 +86,12 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="profile"
+          name="map"
           options={{
-            title: "Perfil",
+            title: "Mapa",
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
+              <Ionicons name="map" size={size} color={color} />
             ),
           }}
         />

@@ -7,7 +7,7 @@ import { RouteOverlay } from "@/components/map/RouteOverlay";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Colors, Spacing, FontSize, BorderRadius, SeverityColors } from "@/constants/theme";
-import { MAP_STYLE_URL, DEFAULT_CENTER } from "@/constants/mapStyles";
+import { DEFAULT_MAP_STYLE, DEFAULT_CENTER } from "@/constants/mapStyles";
 
 const PROFILES = [
   { value: "driving-car", label: "Carro" },
@@ -149,7 +149,7 @@ export default function RoutesScreen() {
 
           {routes[selectedRoute]?.geometry && (
             <View style={styles.mapContainer}>
-              <MapLibreGL.MapView style={styles.map} mapStyle={MAP_STYLE_URL}>
+              <MapLibreGL.MapView style={styles.map} mapStyle={DEFAULT_MAP_STYLE.url}>
                 <MapLibreGL.Camera
                   centerCoordinate={[
                     originCoords?.lon ?? DEFAULT_CENTER.longitude,

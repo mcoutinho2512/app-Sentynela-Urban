@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Platform } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,7 +8,7 @@ import { useIncidentsNearby } from "@/hooks/useIncidents";
 import { useAuthStore } from "@/stores/authStore";
 import { getCurrentLocation } from "@/utils/permissions";
 import { IncidentMarker } from "@/components/map/IncidentMarker";
-import { MAP_STYLE_URL, DEFAULT_CENTER, DEFAULT_ZOOM } from "@/constants/mapStyles";
+import { MAP_STYLES, DEFAULT_MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "@/constants/mapStyles";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/constants/theme";
 
 MapLibreGL.setAccessToken(null);
@@ -19,6 +19,13 @@ export default function MapScreen() {
   const user = useAuthStore((s) => s.user);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapStyleIndex, setMapStyleIndex] = useState(0);
+
+  const currentStyle = MAP_STYLES[mapStyleIndex] ?? DEFAULT_MAP_STYLE;
+
+  const cycleMapStyle = () => {
+    setMapStyleIndex((i) => (i + 1) % MAP_STYLES.length);
+  };
 
   useEffect(() => {
     (async () => {
@@ -57,7 +64,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapLibreGL.MapView style={styles.map} mapStyle={MAP_STYLE_URL}>
+      <MapLibreGL.MapView style={styles.map} mapStyle={currentStyle.url}>
         <MapLibreGL.Camera
           centerCoordinate={[location.longitude, location.latitude]}
           zoomLevel={DEFAULT_ZOOM}
@@ -96,6 +103,16 @@ export default function MapScreen() {
           </View>
         </View>
       </View>
+
+      {/* Map style switcher */}
+      <TouchableOpacity
+        style={[styles.mapStyleButton, { bottom: 20 }]}
+        onPress={cycleMapStyle}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="layers" size={20} color={Colors.primary} />
+        <Text style={styles.mapStyleLabel}>{currentStyle.label}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -172,6 +189,27 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: "bold",
     color: Colors.warning,
+  },
+
+  // Map style switcher
+  mapStyleButton: {
+    position: "absolute",
+    right: Spacing.md,
+    zIndex: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: Colors.glass,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.glassBorder,
+  },
+  mapStyleLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: "600",
+    color: Colors.text,
   },
 
   // Loading
