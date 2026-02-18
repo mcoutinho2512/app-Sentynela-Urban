@@ -435,49 +435,62 @@ export default function RoutesScreen() {
         <View style={styles.results}>
           <Text style={styles.sectionTitle}>Rotas Encontradas</Text>
 
-          {routes[selectedRoute]?.geometry && (
-            <View style={styles.mapContainer}>
-              <MapLibreGL.MapView style={styles.map} mapStyle={DEFAULT_MAP_STYLE.url}>
-                <MapLibreGL.Camera
-                  centerCoordinate={[
-                    userCoords?.lon ?? DEFAULT_CENTER.longitude,
-                    userCoords?.lat ?? DEFAULT_CENTER.latitude,
-                  ]}
-                  zoomLevel={12}
-                  animationDuration={500}
-                />
-                {routes.map((route, i) =>
-                  route.geometry ? (
-                    <RouteOverlay key={i} geometry={route.geometry} riskScore={route.risk_score} id={`route-${i}`} />
-                  ) : null
-                )}
-              </MapLibreGL.MapView>
-            </View>
-          )}
-
-          {routes.map((route, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[styles.routeCard, selectedRoute === i && styles.routeCardSelected]}
-              onPress={() => setSelectedRoute(i)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.routeHeader}>
-                <Text style={styles.routeLabel}>Rota {i + 1}</Text>
-                <View style={[styles.riskBadge, { backgroundColor: getRiskColor(route.risk_score) }]}>
-                  <Text style={styles.riskText}>Risco: {Math.round(route.risk_score * 100)}%</Text>
-                </View>
-              </View>
-              <Text style={styles.routeInfo}>
-                {formatDuration(route.duration_seconds)} · {formatDistance(route.distance_meters)}
+          {/* Check if routes have actual data (API key configured) */}
+          {routes.every((r) => r.duration_seconds === 0 && r.distance_meters === 0 && !r.geometry) ? (
+            <View style={styles.noRouteData}>
+              <Ionicons name="warning-outline" size={32} color={Colors.warning} />
+              <Text style={styles.noRouteTitle}>Servico de rotas indisponivel</Text>
+              <Text style={styles.noRouteHint}>
+                O servico de calculo de rotas (OpenRouteService) nao esta configurado no servidor. Configure a API key para habilitar esta funcionalidade.
               </Text>
-              {route.incidents_on_route.length > 0 && (
-                <Text style={styles.incidentsWarning}>
-                  {route.incidents_on_route.length} incidente(s) no trajeto
-                </Text>
+            </View>
+          ) : (
+            <>
+              {routes[selectedRoute]?.geometry && (
+                <View style={styles.mapContainer}>
+                  <MapLibreGL.MapView style={styles.map} mapStyle={DEFAULT_MAP_STYLE.url}>
+                    <MapLibreGL.Camera
+                      centerCoordinate={[
+                        userCoords?.lon ?? DEFAULT_CENTER.longitude,
+                        userCoords?.lat ?? DEFAULT_CENTER.latitude,
+                      ]}
+                      zoomLevel={12}
+                      animationDuration={500}
+                    />
+                    {routes.map((route, i) =>
+                      route.geometry ? (
+                        <RouteOverlay key={i} geometry={route.geometry} riskScore={route.risk_score} id={`route-${i}`} />
+                      ) : null
+                    )}
+                  </MapLibreGL.MapView>
+                </View>
               )}
-            </TouchableOpacity>
-          ))}
+
+              {routes.map((route, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.routeCard, selectedRoute === i && styles.routeCardSelected]}
+                  onPress={() => setSelectedRoute(i)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.routeHeader}>
+                    <Text style={styles.routeLabel}>Rota {i + 1}</Text>
+                    <View style={[styles.riskBadge, { backgroundColor: getRiskColor(route.risk_score) }]}>
+                      <Text style={styles.riskText}>Risco: {Math.round(route.risk_score * 100)}%</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.routeInfo}>
+                    {formatDuration(route.duration_seconds)} · {formatDistance(route.distance_meters)}
+                  </Text>
+                  {route.incidents_on_route.length > 0 && (
+                    <Text style={styles.incidentsWarning}>
+                      {route.incidents_on_route.length} incidente(s) no trajeto
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
         </View>
       )}
     </ScrollView>
@@ -626,4 +639,15 @@ const styles = StyleSheet.create({
   riskText: { color: "#fff", fontSize: FontSize.xs, fontWeight: "bold" },
   routeInfo: { fontSize: FontSize.sm, color: Colors.textSecondary },
   incidentsWarning: { fontSize: FontSize.sm, color: Colors.danger, fontWeight: "500" },
+  noRouteData: {
+    alignItems: "center",
+    gap: Spacing.sm,
+    padding: Spacing.lg,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  noRouteTitle: { fontSize: FontSize.md, fontWeight: "600", color: Colors.warning },
+  noRouteHint: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: "center" },
 });
