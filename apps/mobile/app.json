@@ -23,7 +23,11 @@
         "NSLocationWhenInUseUsageDescription": "Precisamos da sua localizacao para mostrar incidentes proximos e calcular rotas.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Precisamos da sua localizacao para enviar alertas de incidentes proximos.",
         "NSCameraUsageDescription": "Precisamos da camera para fotografar incidentes.",
-        "NSPhotoLibraryUsageDescription": "Precisamos acessar suas fotos para anexar a relatos de incidentes."
+        "NSPhotoLibraryUsageDescription": "Precisamos acessar suas fotos para anexar a relatos de incidentes.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        }
       }
     },
     "android": {
