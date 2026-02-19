@@ -38,7 +38,7 @@ services:
       DATABASE_URL_SYNC: postgresql://urbanapp:urbanapp_secret@db:5432/urbanapp
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: dev-jwt-secret-change-in-production
-      OPENROUTESERVICE_API_KEY: ""
+      OPENROUTESERVICE_API_KEY: "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjYyMTk0NzFmOTE5NTQwNWZhMjk3YWEyMmVkNWZlMDEyIiwiaCI6Im11cm11cjY0In0="
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:8081","http://localhost:19006"]'
     depends_on:
       db:
