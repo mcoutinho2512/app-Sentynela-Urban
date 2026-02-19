@@ -1,13 +1,17 @@
+"""Location request/response schemas with type-safe validation."""
+
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.schemas.enums import LocationType
 
 
 class LocationCreate(BaseModel):
-    label: str
-    type: str
-    lat: float
-    lon: float
+    label: str = Field(..., min_length=1, max_length=100)
+    type: LocationType
+    lat: float = Field(..., ge=-90, le=90)
+    lon: float = Field(..., ge=-180, le=180)
 
 
 class LocationResponse(BaseModel):
@@ -21,6 +25,6 @@ class LocationResponse(BaseModel):
 
 
 class LocationUpdate(BaseModel):
-    label: str | None = None
-    lat: float | None = None
-    lon: float | None = None
+    label: str | None = Field(None, min_length=1, max_length=100)
+    lat: float | None = Field(None, ge=-90, le=90)
+    lon: float | None = Field(None, ge=-180, le=180)

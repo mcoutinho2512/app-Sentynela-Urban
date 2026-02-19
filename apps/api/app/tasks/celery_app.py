@@ -1,7 +1,13 @@
+import logging
+from datetime import datetime, timezone
+
 from celery import Celery
 from celery.schedules import crontab
+from sqlalchemy import create_engine, text
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 celery = Celery(
     "urban_tasks",
@@ -28,7 +34,22 @@ celery.conf.beat_schedule = {
 @celery.task
 def expire_old_incidents():
     """Mark incidents past their expires_at as resolved."""
-    pass
+    engine = create_engine(settings.DATABASE_URL_SYNC)
+    now = datetime.now(timezone.utc)
+    with engine.connect() as conn:
+        result = conn.execute(
+            text(
+                "UPDATE incidents SET status = 'resolved' "
+                "WHERE status = 'open' AND expires_at IS NOT NULL AND expires_at <= :now"
+            ),
+            {"now": now},
+        )
+        conn.commit()
+        count = result.rowcount
+    engine.dispose()
+    if count > 0:
+        logger.info("Expired %d incidents", count)
+    return {"expired": count}
 
 
 @celery.task

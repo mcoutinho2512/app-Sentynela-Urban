@@ -4,6 +4,7 @@ from app.models.alert import AlertPreference
 from app.models.user_location import UserLocation
 from app.models.subscription import Subscription
 from app.models.service import Service
+from app.models.consent import UserConsent
 
 __all__ = [
     "User",
@@ -14,4 +15,5 @@ __all__ = [
     "UserLocation",
     "Subscription",
     "Service",
+    "UserConsent",
 ]

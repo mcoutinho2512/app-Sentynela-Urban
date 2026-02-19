@@ -1,18 +1,22 @@
+"""Route request/response schemas with type-safe validation."""
+
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.schemas.enums import RouteProfile
 
 
 class CommuteRequest(BaseModel):
-    profile: str = "driving-car"
+    profile: RouteProfile = RouteProfile.driving_car
 
 
 class CustomRouteRequest(BaseModel):
-    origin_lat: float
-    origin_lon: float
-    dest_lat: float
-    dest_lon: float
-    profile: str = "driving-car"
+    origin_lat: float = Field(..., ge=-90, le=90)
+    origin_lon: float = Field(..., ge=-180, le=180)
+    dest_lat: float = Field(..., ge=-90, le=90)
+    dest_lon: float = Field(..., ge=-180, le=180)
+    profile: RouteProfile = RouteProfile.driving_car
 
 
 class RouteResponse(BaseModel):

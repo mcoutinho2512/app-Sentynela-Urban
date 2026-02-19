@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,11 +7,23 @@ import MapLibreGL from "@maplibre/maplibre-react-native";
 import { useIncidentsNearby } from "@/hooks/useIncidents";
 import { useAuthStore } from "@/stores/authStore";
 import { getCurrentLocation } from "@/utils/permissions";
+import { clusterIncidents } from "@/utils/clustering";
 import { IncidentMarker } from "@/components/map/IncidentMarker";
+import { ClusterMarker } from "@/components/map/ClusterMarker";
+import {
+  MapFilterButton,
+  MapFilterPanel,
+  type MapFilters,
+} from "@/components/map/MapFilterPanel";
 import { MAP_STYLES, DEFAULT_MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "@/constants/mapStyles";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/constants/theme";
 
 MapLibreGL.setAccessToken(null);
+
+const DEFAULT_FILTERS: MapFilters = {
+  severities: ["baixa", "media", "alta"],
+  types: [],
+};
 
 export default function MapScreen() {
   const router = useRouter();
@@ -20,6 +32,9 @@ export default function MapScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapStyleIndex, setMapStyleIndex] = useState(0);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<MapFilters>(DEFAULT_FILTERS);
 
   const currentStyle = MAP_STYLES[mapStyleIndex] ?? DEFAULT_MAP_STYLE;
 
@@ -48,7 +63,29 @@ export default function MapScreen() {
     5000
   );
 
-  const incidentCount = incidents?.incidents?.length ?? 0;
+  // Apply filters
+  const filteredIncidents = useMemo(() => {
+    const all = incidents?.incidents ?? [];
+    return all.filter((inc) => {
+      if (!filters.severities.includes(inc.severity)) return false;
+      if (filters.types.length > 0 && !filters.types.includes(inc.type)) return false;
+      return true;
+    });
+  }, [incidents, filters]);
+
+  // Cluster filtered incidents
+  const mapItems = useMemo(
+    () => clusterIncidents(filteredIncidents, zoom),
+    [filteredIncidents, zoom]
+  );
+
+  const handleRegionChange = useCallback((feature: any) => {
+    if (feature?.properties?.zoomLevel) {
+      setZoom(feature.properties.zoomLevel);
+    }
+  }, []);
+
+  const incidentCount = filteredIncidents.length;
 
   if (loading || !location) {
     return (
@@ -64,19 +101,38 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapLibreGL.MapView style={styles.map} mapStyle={currentStyle.url}>
+      <MapLibreGL.MapView
+        style={styles.map}
+        mapStyle={currentStyle.url}
+        onRegionDidChange={handleRegionChange}
+      >
         <MapLibreGL.Camera
           centerCoordinate={[location.longitude, location.latitude]}
           zoomLevel={DEFAULT_ZOOM}
         />
         <MapLibreGL.UserLocation visible />
-        {incidents?.incidents?.map((incident) => (
-          <IncidentMarker
-            key={incident.id}
-            incident={incident}
-            onPress={() => router.push(`/(tabs)/map/${incident.id}`)}
-          />
-        ))}
+
+        {mapItems.map((item) => {
+          if (item.type === "cluster") {
+            return (
+              <ClusterMarker
+                key={item.id}
+                cluster={item}
+                onPress={() => {
+                  // Zoom into cluster
+                  setZoom(Math.min(zoom + 2, 18));
+                }}
+              />
+            );
+          }
+          return (
+            <IncidentMarker
+              key={item.incident.id}
+              incident={item.incident}
+              onPress={() => router.push(`/(tabs)/map/${item.incident.id}`)}
+            />
+          );
+        })}
       </MapLibreGL.MapView>
 
       {/* Header glassmorphism */}
@@ -100,13 +156,28 @@ export default function MapScreen() {
                 <Text style={styles.incidentCount}>{incidentCount}</Text>
               </View>
             )}
+            <MapFilterButton
+              filters={filters}
+              onPress={() => setShowFilters(!showFilters)}
+            />
           </View>
         </View>
       </View>
 
+      {/* Filter panel */}
+      {showFilters && (
+        <View style={styles.filterPanel}>
+          <MapFilterPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            incidentCount={incidentCount}
+          />
+        </View>
+      )}
+
       {/* Map style switcher */}
       <TouchableOpacity
-        style={[styles.mapStyleButton, { bottom: 20 }]}
+        style={[styles.mapStyleButton, { bottom: showFilters ? 220 : 20 }]}
         onPress={cycleMapStyle}
         activeOpacity={0.7}
       >
@@ -189,6 +260,15 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: "bold",
     color: Colors.warning,
+  },
+
+  // Filter panel
+  filterPanel: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
 
   // Map style switcher

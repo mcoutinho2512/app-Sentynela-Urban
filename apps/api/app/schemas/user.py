@@ -1,17 +1,19 @@
+"""User request/response schemas with validation."""
+
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserCreate(BaseModel):
-    email: str
-    password: str
-    name: str
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+    name: str = Field(..., min_length=1, max_length=100)
 
 
 class UserLogin(BaseModel):
-    email: str
-    password: str
+    email: EmailStr
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class UserResponse(BaseModel):
@@ -33,8 +35,8 @@ class TokenResponse(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    name: str | None = None
-    avatar_url: str | None = None
+    name: str | None = Field(None, min_length=1, max_length=100)
+    avatar_url: str | None = Field(None, max_length=500)
 
 
 class RefreshRequest(BaseModel):

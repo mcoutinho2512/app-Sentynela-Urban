@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
@@ -9,9 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.redis import redis_client
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
+
+# Redis key prefix for revoked tokens
+_REVOKED_PREFIX = "revoked:"
 
 
 # ---------------------------------------------------------------------------
@@ -19,18 +24,26 @@ bearer_scheme = HTTPBearer()
 # ---------------------------------------------------------------------------
 
 def create_access_token(data: dict) -> str:
-    """Create a short-lived access JWT."""
+    """Create a short-lived access JWT with unique JTI."""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire, "type": "access"})
+    to_encode.update({
+        "exp": expire,
+        "type": "access",
+        "jti": uuid.uuid4().hex,
+    })
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_refresh_token(data: dict) -> str:
-    """Create a long-lived refresh JWT."""
+    """Create a long-lived refresh JWT with unique JTI."""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh",
+        "jti": uuid.uuid4().hex,
+    })
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
@@ -44,6 +57,16 @@ def verify_token(token: str) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         ) from exc
+
+
+async def revoke_token(jti: str, ttl_seconds: int) -> None:
+    """Add a JTI to the revocation blacklist in Redis."""
+    await redis_client.set(f"{_REVOKED_PREFIX}{jti}", "1", ex=ttl_seconds)
+
+
+async def is_token_revoked(jti: str) -> bool:
+    """Check if a JTI has been revoked."""
+    return await redis_client.exists(f"{_REVOKED_PREFIX}{jti}") > 0
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +96,14 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token type",
+        )
+
+    # Check JTI revocation
+    jti = payload.get("jti")
+    if jti and await is_token_revoked(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
         )
 
     user_id: int | None = payload.get("sub")

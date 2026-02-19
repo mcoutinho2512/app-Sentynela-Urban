@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from geoalchemy2 import Geography
-from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_X, ST_Y
 from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.geo_privacy import fuzz_coordinates, snap_to_grid
+from app.core.rate_limit import rate_limit_by_user
 from app.core.security import get_current_user
 from app.models.incident import Incident, IncidentComment, IncidentVote
 from app.models.user import User
+from app.schemas.enums import MINIMUM_REPUTATION_FOR_RESTRICTED, RESTRICTED_INCIDENT_TYPES, SENSITIVE_INCIDENT_TYPES
 from app.schemas.incident import (
     IncidentCommentCreate,
     IncidentCommentResponse,
@@ -24,19 +28,63 @@ router = APIRouter(prefix="/incidents", tags=["incidents"])
 @router.post("", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
 async def create_incident(
     body: IncidentCreate,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    point = func.ST_SetSRID(func.ST_MakePoint(body.lon, body.lat), 4326)
+    # Rate limit per user
+    await rate_limit_by_user(
+        current_user.id,
+        max_requests=settings.INCIDENT_RATE_LIMIT_PER_HOUR,
+        window_seconds=3600,
+        action="create_incident",
+    )
+
+    # Reputation gate for restricted types (tiroteio, assalto)
+    if body.type in RESTRICTED_INCIDENT_TYPES:
+        if (current_user.reputation or 0) < MINIMUM_REPUTATION_FOR_RESTRICTED:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Minimum reputation of {MINIMUM_REPUTATION_FOR_RESTRICTED} required for this incident type",
+            )
+
+    # Duplicate detection: same type within radius and time window
+    dup_window = datetime.now(timezone.utc) - timedelta(minutes=settings.INCIDENT_DUPLICATE_WINDOW_MIN)
+    dup_center = func.ST_SetSRID(func.ST_MakePoint(body.lon, body.lat), 4326)
+    dup_q = select(func.count()).where(
+        Incident.type == body.type.value,
+        Incident.created_at >= dup_window,
+        func.ST_DWithin(
+            cast(Incident.public_geom, Geography),
+            cast(dup_center, Geography),
+            settings.INCIDENT_DUPLICATE_RADIUS_M,
+        ),
+    )
+    dup_count = (await db.execute(dup_q)).scalar() or 0
+    if dup_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A similar incident was already reported nearby. Try confirming the existing one.",
+        )
+
+    # Exact coordinates (private, for admin/analytics)
+    exact_point = func.ST_SetSRID(func.ST_MakePoint(body.lon, body.lat), 4326)
+
+    # Public coordinates with geo privacy for sensitive types
+    if body.type in SENSITIVE_INCIDENT_TYPES:
+        pub_lat, pub_lon = snap_to_grid(body.lat, body.lon)
+    else:
+        pub_lat, pub_lon = fuzz_coordinates(body.lat, body.lon)
+    public_point = func.ST_SetSRID(func.ST_MakePoint(pub_lon, pub_lat), 4326)
 
     incident = Incident(
         user_id=current_user.id,
-        type=body.type,
-        severity=body.severity,
+        type=body.type.value,
+        severity=body.severity.value,
         description=body.description,
         photo_url=body.photo_url,
-        geom=point,
-        public_geom=point,
+        geom=exact_point,
+        public_geom=public_point,
     )
     db.add(incident)
     await db.flush()
@@ -47,8 +95,8 @@ async def create_incident(
 
 @router.get("", response_model=IncidentListResponse)
 async def list_incidents(
-    lat: float = Query(...),
-    lon: float = Query(...),
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
     radius_m: int = Query(1000, ge=100, le=50000),
     status_filter: str | None = Query(None, alias="status"),
     type_filter: str | None = Query(None, alias="type"),
@@ -58,11 +106,53 @@ async def list_incidents(
     db: AsyncSession = Depends(get_db),
 ):
     center = func.ST_SetSRID(func.ST_MakePoint(lon, lat), 4326)
-    base = select(Incident).where(
-        func.ST_DWithin(
-            cast(Incident.public_geom, Geography),
-            cast(center, Geography),
-            radius_m,
+
+    # Build query with vote counts via subqueries to avoid N+1
+    confirm_sq = (
+        select(
+            IncidentVote.incident_id,
+            func.count().label("cnt"),
+        )
+        .where(IncidentVote.vote == "confirm")
+        .group_by(IncidentVote.incident_id)
+        .subquery()
+    )
+    refute_sq = (
+        select(
+            IncidentVote.incident_id,
+            func.count().label("cnt"),
+        )
+        .where(IncidentVote.vote == "refute")
+        .group_by(IncidentVote.incident_id)
+        .subquery()
+    )
+    viewer_sq = (
+        select(
+            IncidentVote.incident_id,
+            IncidentVote.vote,
+        )
+        .where(IncidentVote.user_id == current_user.id)
+        .subquery()
+    )
+
+    base = (
+        select(
+            Incident,
+            func.ST_Y(Incident.public_geom).label("lat"),
+            func.ST_X(Incident.public_geom).label("lon"),
+            func.coalesce(confirm_sq.c.cnt, 0).label("confirmations"),
+            func.coalesce(refute_sq.c.cnt, 0).label("refutations"),
+            viewer_sq.c.vote.label("user_vote"),
+        )
+        .outerjoin(confirm_sq, confirm_sq.c.incident_id == Incident.id)
+        .outerjoin(refute_sq, refute_sq.c.incident_id == Incident.id)
+        .outerjoin(viewer_sq, viewer_sq.c.incident_id == Incident.id)
+        .where(
+            func.ST_DWithin(
+                cast(Incident.public_geom, Geography),
+                cast(center, Geography),
+                radius_m,
+            )
         )
     )
 
@@ -71,15 +161,57 @@ async def list_incidents(
     if type_filter:
         base = base.where(Incident.type == type_filter)
 
-    count_q = select(func.count()).select_from(base.subquery())
+    count_q = select(func.count()).select_from(
+        select(Incident.id)
+        .where(
+            func.ST_DWithin(
+                cast(Incident.public_geom, Geography),
+                cast(center, Geography),
+                radius_m,
+            )
+        )
+        .subquery()
+    )
+    if status_filter:
+        count_q = select(func.count()).select_from(
+            select(Incident.id)
+            .where(
+                Incident.status == status_filter,
+                func.ST_DWithin(
+                    cast(Incident.public_geom, Geography),
+                    cast(center, Geography),
+                    radius_m,
+                )
+            )
+            .subquery()
+        )
     total = (await db.execute(count_q)).scalar() or 0
 
     rows = await db.execute(
         base.order_by(Incident.created_at.desc()).offset(offset).limit(limit)
     )
-    incidents = rows.scalars().all()
 
-    items = [await _incident_to_response(db, inc, current_user.id) for inc in incidents]
+    items = []
+    for inc, lat_val, lon_val, confirmations, refutations, user_vote in rows.all():
+        items.append(
+            IncidentResponse(
+                id=inc.id,
+                user_id=inc.user_id,
+                type=inc.type,
+                severity=inc.severity,
+                status=inc.status,
+                description=inc.description,
+                photo_url=inc.photo_url,
+                lat=lat_val,
+                lon=lon_val,
+                created_at=inc.created_at,
+                expires_at=inc.expires_at,
+                confirmations=confirmations,
+                refutations=refutations,
+                user_vote=user_vote,
+            )
+        )
+
     return IncidentListResponse(incidents=items, total=total)
 
 
@@ -118,18 +250,18 @@ async def vote_incident(
     vote = IncidentVote(
         incident_id=incident_id,
         user_id=current_user.id,
-        vote=body.vote,
+        vote=body.vote.value,
     )
     db.add(vote)
 
     # Adjust reputation on the incident author
     author = await db.get(User, incident.user_id)
     if author:
-        if body.vote == "confirm":
+        if body.vote.value == "confirm":
             author.reputation = (author.reputation or 0) + settings.REPUTATION_CONFIRM_BONUS
-        elif body.vote == "refute":
+        elif body.vote.value == "refute":
             author.reputation = (author.reputation or 0) - settings.REPUTATION_REFUTE_PENALTY
-        elif body.vote == "resolved":
+        elif body.vote.value == "resolved":
             author.reputation = (author.reputation or 0) + settings.REPUTATION_RESOLVE_BONUS
             incident.status = "resolved"
         db.add(author)
@@ -155,7 +287,6 @@ async def vote_incident(
     if refute_count >= settings.REPUTATION_THRESHOLD_REFUTATIONS:
         incident.status = "disputed"
     elif confirm_count >= settings.REPUTATION_THRESHOLD_CONFIRMATIONS and incident.status == "open":
-        # Confirmed incidents stay open but could trigger alerts
         pass
 
     db.add(incident)
@@ -253,7 +384,6 @@ async def _incident_to_response(
     )
     viewer_vote = viewer_vote_row.scalar_one_or_none()
 
-    # Extract lat/lon from public_geom via ST_X / ST_Y
     coords = await db.execute(
         select(
             func.ST_Y(incident.public_geom).label("lat"),

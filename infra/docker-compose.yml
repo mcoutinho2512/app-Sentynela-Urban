@@ -4,15 +4,15 @@ services:
   db:
     image: postgis/postgis:16-3.4
     environment:
-      POSTGRES_DB: urbanapp
-      POSTGRES_USER: urbanapp
-      POSTGRES_PASSWORD: urbanapp_secret
+      POSTGRES_DB: ${POSTGRES_DB:-urbanapp}
+      POSTGRES_USER: ${POSTGRES_USER:-urbanapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     ports:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U urbanapp"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-urbanapp}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,6 +21,7 @@ services:
     image: redis:7-alpine
     ports:
       - "6380:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -33,13 +34,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8001:8000"
+    env_file:
+      - ../.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://urbanapp:urbanapp_secret@db:5432/urbanapp
-      DATABASE_URL_SYNC: postgresql://urbanapp:urbanapp_secret@db:5432/urbanapp
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-urbanapp}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-urbanapp}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-urbanapp}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-urbanapp}
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: dev-jwt-secret-change-in-production
-      OPENROUTESERVICE_API_KEY: "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjYyMTk0NzFmOTE5NTQwNWZhMjk3YWEyMmVkNWZlMDEyIiwiaCI6Im11cm11cjY0In0="
-      CORS_ORIGINS: '["http://localhost:3000","http://localhost:8081","http://localhost:19006"]'
     depends_on:
       db:
         condition: service_healthy
@@ -55,11 +55,12 @@ services:
     build:
       context: ../apps/api
       dockerfile: Dockerfile
+    env_file:
+      - ../.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://urbanapp:urbanapp_secret@db:5432/urbanapp
-      DATABASE_URL_SYNC: postgresql://urbanapp:urbanapp_secret@db:5432/urbanapp
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-urbanapp}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-urbanapp}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-urbanapp}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-urbanapp}
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: dev-jwt-secret-change-in-production
     depends_on:
       db:
         condition: service_healthy

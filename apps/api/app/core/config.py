@@ -1,5 +1,5 @@
+from pydantic import ConfigDict, field_validator
 from pydantic_settings import BaseSettings
-from pydantic import ConfigDict
 
 
 class Settings(BaseSettings):
@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # ---------- JWT ----------
-    JWT_SECRET: str = "change-me-in-production"
+    JWT_SECRET: str  # REQUIRED - no default, must be set via env
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
@@ -36,6 +36,23 @@ class Settings(BaseSettings):
 
     # ---------- Uploads ----------
     UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024  # 5MB
+
+    # ---------- Rate limits ----------
+    LOGIN_RATE_LIMIT: int = 10  # per window
+    LOGIN_RATE_WINDOW: int = 900  # 15 minutes
+    REGISTER_RATE_LIMIT: int = 5
+    REGISTER_RATE_WINDOW: int = 3600  # 1 hour
+
+    @field_validator("JWT_SECRET")
+    @classmethod
+    def jwt_secret_must_be_strong(cls, v: str) -> str:
+        weak = {"change-me-in-production", "secret", "dev-jwt-secret-change-in-production", ""}
+        if v in weak:
+            raise ValueError("JWT_SECRET must be set to a strong, unique value")
+        if len(v) < 32:
+            raise ValueError("JWT_SECRET must be at least 32 characters")
+        return v
 
 
 settings = Settings()

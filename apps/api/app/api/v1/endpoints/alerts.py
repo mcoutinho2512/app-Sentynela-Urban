@@ -29,8 +29,8 @@ async def create_alert_preference(
         neighborhood_name=body.neighborhood_name,
         center_geom=center_geom,
         radius_km=body.radius_km,
-        types=body.types,
-        min_severity=body.min_severity,
+        types=[t.value for t in body.types] if body.types else None,
+        min_severity=body.min_severity.value,
         enabled=body.enabled,
     )
     db.add(pref)

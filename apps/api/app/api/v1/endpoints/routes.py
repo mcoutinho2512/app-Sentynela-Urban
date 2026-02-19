@@ -48,7 +48,7 @@ async def commute_route(
         origin_lon=home_coords[1],
         dest_lat=work_coords[0],
         dest_lon=work_coords[1],
-        profile=body.profile,
+        profile=body.profile.value,
     )
 
 
@@ -65,7 +65,7 @@ async def custom_route(
         origin_lon=body.origin_lon,
         dest_lat=body.dest_lat,
         dest_lon=body.dest_lon,
-        profile=body.profile,
+        profile=body.profile.value,
     )
 
 
@@ -129,8 +129,15 @@ async def _fetch_route(
         "alternative_routes": {"target_count": 3},
     }
 
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.post(url, json=payload, headers=headers)
+    transport = httpx.AsyncHTTPTransport(retries=2)
+    async with httpx.AsyncClient(timeout=15, transport=transport) as client:
+        try:
+            resp = await client.post(url, json=payload, headers=headers)
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Route service unavailable. Try again later.",
+            ) from exc
 
     if resp.status_code != 200:
         raise HTTPException(

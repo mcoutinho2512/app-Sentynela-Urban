@@ -23,7 +23,7 @@ async def create_location(
     loc = UserLocation(
         user_id=current_user.id,
         label=body.label,
-        type=body.type,
+        type=body.type.value,
         geom=point,
     )
     db.add(loc)
