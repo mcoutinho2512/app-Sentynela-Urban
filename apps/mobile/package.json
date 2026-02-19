@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^3.9.0",
     "@maplibre/maplibre-react-native": "^10.0.0",
     "@react-native-community/netinfo": "11.4.1",
+    "@react-native-community/slider": "^5.1.2",
     "@tanstack/react-query": "^5.0.0",
     "axios": "^1.7.0",
     "expo": "~53.0.0",

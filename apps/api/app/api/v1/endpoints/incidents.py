@@ -216,6 +216,62 @@ async def list_incidents(
     return IncidentListResponse(incidents=items, total=total)
 
 
+@router.get("/preview")
+async def preview_incidents(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    radius_km: float = Query(2, ge=0.1, le=50),
+    types: str | None = Query(None),
+    min_severity: str | None = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Preview count of open incidents in a given area - used by alert creation form."""
+    radius_m = radius_km * 1000
+    center = func.ST_SetSRID(func.ST_MakePoint(lon, lat), 4326)
+
+    severity_order = {"baixa": 1, "media": 2, "alta": 3}
+
+    query = select(func.count()).select_from(Incident).where(
+        Incident.status == "open",
+        func.ST_DWithin(
+            cast(Incident.public_geom, Geography),
+            cast(center, Geography),
+            radius_m,
+        ),
+    )
+
+    if types:
+        type_list = [t.strip() for t in types.split(",") if t.strip()]
+        if type_list:
+            query = query.where(Incident.type.in_(type_list))
+
+    total = (await db.execute(query)).scalar() or 0
+
+    # If min_severity filter, count only those at or above
+    if min_severity and min_severity in severity_order:
+        min_sev = severity_order[min_severity]
+        matching_types = [k for k, v in severity_order.items() if v >= min_sev]
+        filtered_q = select(func.count()).select_from(Incident).where(
+            Incident.status == "open",
+            Incident.severity.in_(matching_types),
+            func.ST_DWithin(
+                cast(Incident.public_geom, Geography),
+                cast(center, Geography),
+                radius_m,
+            ),
+        )
+        if types:
+            type_list = [t.strip() for t in types.split(",") if t.strip()]
+            if type_list:
+                filtered_q = filtered_q.where(Incident.type.in_(type_list))
+        filtered = (await db.execute(filtered_q)).scalar() or 0
+    else:
+        filtered = total
+
+    return {"total": total, "filtered": filtered, "radius_km": radius_km}
+
+
 @router.get("/{incident_id}", response_model=IncidentResponse)
 async def get_incident(
     incident_id: int,

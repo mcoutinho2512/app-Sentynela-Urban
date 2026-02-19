@@ -34,6 +34,18 @@ class ServiceResponse(BaseModel):
     created_at: datetime
 
 
+class ServiceUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=200)
+    category: str | None = Field(None, min_length=1, max_length=100)
+    description: str | None = Field(None, max_length=2000)
+    phone: str | None = Field(None, max_length=20)
+    whatsapp: str | None = Field(None, max_length=20)
+    hours: str | None = Field(None, max_length=200)
+    lat: float | None = Field(None, ge=-90, le=90)
+    lon: float | None = Field(None, ge=-180, le=180)
+    images: list[str] | None = None
+
+
 class ServiceListResponse(BaseModel):
     services: list[ServiceResponse]
     total: int

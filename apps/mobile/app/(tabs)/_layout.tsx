@@ -86,6 +86,16 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="services"
+          options={{
+            title: "Servicos",
+            headerShown: false,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="storefront" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="map"
           options={{
             title: "Mapa",

@@ -35,6 +35,12 @@ export interface CreateAlertPreference {
   enabled?: boolean;
 }
 
+export interface IncidentPreview {
+  total: number;
+  filtered: number;
+  radius_km: number;
+}
+
 export const alertsApi = {
   getPreferences: () =>
     apiClient.get<AlertPreference[]>("/alerts/preferences").then((r) => r.data),
@@ -47,4 +53,11 @@ export const alertsApi = {
 
   getAlertFeed: () =>
     apiClient.get<AlertFeedItem[]>("/alerts/feed").then((r) => r.data),
+
+  previewIncidents: (lat: number, lon: number, radiusKm: number, types?: string[], minSeverity?: string) => {
+    const params: Record<string, string | number> = { lat, lon, radius_km: radiusKm };
+    if (types && types.length > 0) params.types = types.join(",");
+    if (minSeverity) params.min_severity = minSeverity;
+    return apiClient.get<IncidentPreview>("/incidents/preview", { params }).then((r) => r.data);
+  },
 };
