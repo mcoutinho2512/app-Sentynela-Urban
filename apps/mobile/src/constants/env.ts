@@ -2,9 +2,9 @@ import Constants from "expo-constants";
 
 const getApiUrl = (): string => {
   if (__DEV__) {
-    return "http://10.50.30.244:8001";
+    return "http://69.6.250.114";
   }
-  return "https://api.urbanassistant.com";
+  return "http://69.6.250.114";
 };
 
 const API_URL = getApiUrl();
