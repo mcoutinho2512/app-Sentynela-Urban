@@ -60,13 +60,7 @@
           "photosPermission": "Precisamos acessar suas fotos para anexar a relatos de incidentes."
         }
       ],
-      [
-        "expo-notifications",
-        {
-          "color": "#4361ee",
-          "icon": "./assets/notification-icon.png"
-        }
-      ],
+      "expo-notifications",
       "expo-asset",
       "expo-font",
       "@maplibre/maplibre-react-native"
