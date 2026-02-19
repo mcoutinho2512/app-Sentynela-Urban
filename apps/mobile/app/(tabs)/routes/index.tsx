@@ -450,11 +450,20 @@ export default function RoutesScreen() {
                 <View style={styles.mapContainer}>
                   <MapLibreGL.MapView style={styles.map} mapStyle={DEFAULT_MAP_STYLE.url}>
                     <MapLibreGL.Camera
-                      centerCoordinate={[
-                        userCoords?.lon ?? DEFAULT_CENTER.longitude,
-                        userCoords?.lat ?? DEFAULT_CENTER.latitude,
-                      ]}
-                      zoomLevel={12}
+                      bounds={{
+                        ne: [
+                          Math.max(userCoords?.lon ?? DEFAULT_CENTER.longitude, selectedDest ? parseFloat(selectedDest.lon) : commuteInfo.dest?.lon ?? DEFAULT_CENTER.longitude) + 0.02,
+                          Math.max(userCoords?.lat ?? DEFAULT_CENTER.latitude, selectedDest ? parseFloat(selectedDest.lat) : commuteInfo.dest?.lat ?? DEFAULT_CENTER.latitude) + 0.02,
+                        ],
+                        sw: [
+                          Math.min(userCoords?.lon ?? DEFAULT_CENTER.longitude, selectedDest ? parseFloat(selectedDest.lon) : commuteInfo.dest?.lon ?? DEFAULT_CENTER.longitude) - 0.02,
+                          Math.min(userCoords?.lat ?? DEFAULT_CENTER.latitude, selectedDest ? parseFloat(selectedDest.lat) : commuteInfo.dest?.lat ?? DEFAULT_CENTER.latitude) - 0.02,
+                        ],
+                        paddingTop: 20,
+                        paddingBottom: 20,
+                        paddingLeft: 20,
+                        paddingRight: 20,
+                      }}
                       animationDuration={500}
                     />
                     {routes.map((route, i) =>

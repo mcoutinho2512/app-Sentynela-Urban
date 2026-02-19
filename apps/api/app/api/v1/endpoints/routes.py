@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from geoalchemy2 import Geography
 import httpx
 
 from app.core.config import settings
@@ -200,8 +201,8 @@ async def _incidents_near_line(
         .where(
             Incident.status == "open",
             func.ST_DWithin(
-                Incident.public_geom,
-                func.ST_Geography(line),
+                cast(Incident.public_geom, Geography),
+                cast(line, Geography),
                 buffer_m,
             ),
         )
