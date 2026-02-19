@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.geo_privacy import fuzz_coordinates, snap_to_grid
+from app.core.geo_privacy import snap_to_grid
 from app.core.rate_limit import rate_limit_by_user
 from app.core.security import get_current_user
 from app.models.incident import Incident, IncidentComment, IncidentVote
@@ -70,12 +70,13 @@ async def create_incident(
     # Exact coordinates (private, for admin/analytics)
     exact_point = func.ST_SetSRID(func.ST_MakePoint(body.lon, body.lat), 4326)
 
-    # Public coordinates with geo privacy for sensitive types
+    # Public coordinates: only apply geo privacy to sensitive types
     if body.type in SENSITIVE_INCIDENT_TYPES:
         pub_lat, pub_lon = snap_to_grid(body.lat, body.lon)
+        public_point = func.ST_SetSRID(func.ST_MakePoint(pub_lon, pub_lat), 4326)
     else:
-        pub_lat, pub_lon = fuzz_coordinates(body.lat, body.lon)
-    public_point = func.ST_SetSRID(func.ST_MakePoint(pub_lon, pub_lat), 4326)
+        # Non-sensitive types: use exact coordinates
+        public_point = exact_point
 
     incident = Incident(
         user_id=current_user.id,
