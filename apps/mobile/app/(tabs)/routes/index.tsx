@@ -466,24 +466,43 @@ export default function RoutesScreen() {
                       }}
                       animationDuration={500}
                     />
+                    {/* Render non-selected routes first (behind), then selected on top */}
                     {routes.map((route, i) =>
-                      route.geometry ? (
-                        <RouteOverlay key={i} geometry={route.geometry} riskScore={route.risk_score} id={`route-${i}`} />
+                      route.geometry && i !== selectedRoute ? (
+                        <RouteOverlay key={i} geometry={route.geometry} riskScore={route.risk_score} id={`route-${i}`} routeIndex={i} isSelected={false} />
                       ) : null
+                    )}
+                    {routes[selectedRoute]?.geometry && (
+                      <RouteOverlay
+                        key={selectedRoute}
+                        geometry={routes[selectedRoute].geometry}
+                        riskScore={routes[selectedRoute].risk_score}
+                        id={`route-${selectedRoute}`}
+                        routeIndex={selectedRoute}
+                        isSelected={true}
+                      />
                     )}
                   </MapLibreGL.MapView>
                 </View>
               )}
 
-              {routes.map((route, i) => (
+              {routes.map((route, i) => {
+                const routeColors = ["#00ff88", "#00d4ff", "#ffbe0b"];
+                const routeColor = routeColors[i] ?? routeColors[routeColors.length - 1];
+                return (
                 <TouchableOpacity
                   key={i}
-                  style={[styles.routeCard, selectedRoute === i && styles.routeCardSelected]}
+                  style={[styles.routeCard, selectedRoute === i && { borderColor: routeColor, borderWidth: 2 }]}
                   onPress={() => setSelectedRoute(i)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.routeHeader}>
-                    <Text style={styles.routeLabel}>Rota {i + 1}</Text>
+                    <View style={styles.routeLabelRow}>
+                      <View style={[styles.routeColorDot, { backgroundColor: routeColor }]} />
+                      <Text style={styles.routeLabel}>
+                        {i === 0 ? "Melhor Rota" : `Rota ${i + 1}`}
+                      </Text>
+                    </View>
                     <View style={[styles.riskBadge, { backgroundColor: getRiskColor(route.risk_score) }]}>
                       <Text style={styles.riskText}>Risco: {Math.round(route.risk_score * 100)}%</Text>
                     </View>
@@ -497,7 +516,8 @@ export default function RoutesScreen() {
                     </Text>
                   )}
                 </TouchableOpacity>
-              ))}
+                );
+              })}
             </>
           )}
         </View>
@@ -637,8 +657,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  routeCardSelected: { borderColor: Colors.primary, borderWidth: 2 },
   routeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  routeLabelRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  routeColorDot: { width: 12, height: 12, borderRadius: 6 },
   routeLabel: { fontSize: FontSize.md, fontWeight: "600", color: Colors.text },
   riskBadge: {
     paddingHorizontal: Spacing.sm,

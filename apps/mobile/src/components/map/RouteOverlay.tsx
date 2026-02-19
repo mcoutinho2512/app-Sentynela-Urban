@@ -1,9 +1,14 @@
 import MapLibreGL from "@maplibre/maplibre-react-native";
 
+// Colors for up to 3 routes: best (green), alternative 1 (cyan), alternative 2 (yellow)
+const ROUTE_COLORS = ["#00ff88", "#00d4ff", "#ffbe0b"];
+
 interface RouteOverlayProps {
   geometry: any;
   riskScore: number;
   id: string;
+  routeIndex?: number;
+  isSelected?: boolean;
 }
 
 // Decode Google Encoded Polyline (used by OpenRouteService)
@@ -46,16 +51,14 @@ function decodePolyline(encoded: string): [number, number][] {
   return coords;
 }
 
-export function RouteOverlay({ geometry, riskScore, id }: RouteOverlayProps) {
+export function RouteOverlay({ geometry, id, routeIndex = 0, isSelected = true }: RouteOverlayProps) {
   if (!geometry) return null;
 
-  const color =
-    riskScore < 0.3 ? "#06d6a0" : riskScore < 0.7 ? "#ffd166" : "#ef476f";
+  const color = ROUTE_COLORS[routeIndex] ?? ROUTE_COLORS[ROUTE_COLORS.length - 1];
 
   let geoJSONGeometry: GeoJSON.Geometry;
 
   if (typeof geometry === "string") {
-    // Encoded polyline from OpenRouteService
     const coordinates = decodePolyline(geometry);
     geoJSONGeometry = { type: "LineString", coordinates };
   } else {
@@ -74,8 +77,8 @@ export function RouteOverlay({ geometry, riskScore, id }: RouteOverlayProps) {
         id={`route-line-${id}`}
         style={{
           lineColor: color,
-          lineWidth: 5,
-          lineOpacity: 0.8,
+          lineWidth: isSelected ? 6 : 3,
+          lineOpacity: isSelected ? 0.9 : 0.35,
           lineCap: "round",
           lineJoin: "round",
         }}
