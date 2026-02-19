@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
-from app.schemas.user import UserResponse
+from app.schemas.user import UserResponse, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -16,15 +16,14 @@ async def get_profile(current_user: User = Depends(get_current_user)):
 
 @router.patch("/me", response_model=UserResponse)
 async def update_profile(
-    name: str | None = None,
-    avatar_url: str | None = None,
+    body: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if name is not None:
-        current_user.name = name
-    if avatar_url is not None:
-        current_user.avatar_url = avatar_url
+    if body.name is not None:
+        current_user.name = body.name
+    if body.avatar_url is not None:
+        current_user.avatar_url = body.avatar_url
     db.add(current_user)
     await db.flush()
     return UserResponse.model_validate(current_user)

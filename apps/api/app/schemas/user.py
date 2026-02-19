@@ -32,5 +32,10 @@ class TokenResponse(BaseModel):
     token_type: str
 
 
+class UserUpdate(BaseModel):
+    name: str | None = None
+    avatar_url: str | None = None
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str

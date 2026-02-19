@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from geoalchemy2 import Geography
+from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -59,8 +60,8 @@ async def list_services(
     base = select(Service).where(
         Service.status == "approved",
         func.ST_DWithin(
-            Service.geom,
-            func.ST_Geography(center),
+            cast(Service.geom, Geography),
+            cast(center, Geography),
             radius_m,
         ),
     )

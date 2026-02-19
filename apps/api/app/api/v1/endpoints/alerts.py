@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from geoalchemy2 import Geography
+from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -102,8 +103,8 @@ async def alert_feed(
                 select(
                     Incident,
                     func.ST_Distance(
-                        func.ST_Geography(Incident.public_geom),
-                        func.ST_Geography(center_point),
+                        cast(Incident.public_geom, Geography),
+                        cast(center_point, Geography),
                     ).label("distance_m"),
                     func.ST_Y(Incident.public_geom).label("lat"),
                     func.ST_X(Incident.public_geom).label("lon"),
@@ -111,8 +112,8 @@ async def alert_feed(
                 .where(
                     Incident.status == "open",
                     func.ST_DWithin(
-                        Incident.public_geom,
-                        func.ST_Geography(center_point),
+                        cast(Incident.public_geom, Geography),
+                        cast(center_point, Geography),
                         radius_m,
                     ),
                 )

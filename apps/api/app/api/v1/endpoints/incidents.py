@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from geoalchemy2 import Geography
 from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID, ST_X, ST_Y
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -59,8 +60,8 @@ async def list_incidents(
     center = func.ST_SetSRID(func.ST_MakePoint(lon, lat), 4326)
     base = select(Incident).where(
         func.ST_DWithin(
-            Incident.public_geom,
-            func.ST_Geography(center),
+            cast(Incident.public_geom, Geography),
+            cast(center, Geography),
             radius_m,
         )
     )
