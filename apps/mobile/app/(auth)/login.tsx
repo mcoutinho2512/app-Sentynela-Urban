@@ -33,7 +33,8 @@ export default function LoginScreen() {
       await login(data.email, data.password);
       router.replace("/(tabs)/map");
     } catch (err: any) {
-      Alert.alert("Erro", err?.response?.data?.detail || "Falha no login");
+      const msg = err?.response?.data?.detail || err?.message || "Falha no login";
+      Alert.alert("Erro", msg);
     }
   };
 

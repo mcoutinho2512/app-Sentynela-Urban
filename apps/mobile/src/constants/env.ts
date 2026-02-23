@@ -2,9 +2,9 @@ import Constants from "expo-constants";
 
 const getApiUrl = (): string => {
   if (__DEV__) {
-    return "http://69.6.250.114:9090";
+    return "https://api.appsentynela.com.br";
   }
-  return "http://69.6.250.114:9090";
+  return "https://api.appsentynela.com.br";
 };
 
 const API_URL = getApiUrl();

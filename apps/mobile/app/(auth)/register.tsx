@@ -40,12 +40,8 @@ export default function RegisterScreen() {
       await register(data.email, data.password, data.name);
       router.replace("/(tabs)/map");
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      const status = err?.response?.status;
-      const message = detail
-        ? `${status}: ${detail}`
-        : `${err.message} | URL: ${err?.config?.url}`;
-      Alert.alert("Erro", message);
+      const msg = err?.response?.data?.detail || err?.message || "Falha no cadastro";
+      Alert.alert("Erro", msg);
     }
   };
 
@@ -122,6 +118,13 @@ export default function RegisterScreen() {
             )}
           />
 
+          <Text style={styles.termsText}>
+            Ao cadastrar, voce concorda com nossa{" "}
+            <Text style={styles.termsLink} onPress={() => router.push("/(tabs)/profile/privacy")}>
+              Politica de Privacidade
+            </Text>
+          </Text>
+
           <Button
             title="Cadastrar"
             onPress={handleSubmit(onSubmit)}
@@ -165,5 +168,14 @@ const styles = StyleSheet.create({
   linkText: {
     color: Colors.primary,
     fontSize: FontSize.sm,
+  },
+  termsText: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
+  termsLink: {
+    color: Colors.primary,
+    textDecorationLine: "underline",
   },
 });

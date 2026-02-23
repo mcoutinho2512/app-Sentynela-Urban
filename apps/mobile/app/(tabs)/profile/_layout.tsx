@@ -18,6 +18,7 @@ export default function ProfileLayout() {
     >
       <Stack.Screen name="index" options={{ title: "Perfil" }} />
       <Stack.Screen name="subscription" options={{ title: "Assinatura" }} />
+      <Stack.Screen name="privacy" options={{ title: "Privacidade" }} />
     </Stack>
   );
 }

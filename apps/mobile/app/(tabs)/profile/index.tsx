@@ -414,6 +414,14 @@ export default function ProfileScreen() {
           onPress={() => router.push("/(tabs)/profile/subscription")}
           variant="outline"
         />
+        <TouchableOpacity
+          style={styles.privacyLink}
+          onPress={() => router.push("/(tabs)/profile/privacy")}
+        >
+          <Ionicons name="shield-checkmark-outline" size={18} color={Colors.textSecondary} />
+          <Text style={styles.privacyLinkText}>Politica de Privacidade</Text>
+          <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+        </TouchableOpacity>
         <Button title="Sair" onPress={handleLogout} variant="danger" />
         <TouchableOpacity style={styles.deleteAccount} onPress={handleDeleteAccount}>
           <Text style={styles.deleteAccountText}>Excluir minha conta</Text>
@@ -559,6 +567,22 @@ const styles = StyleSheet.create({
   locationLabel: { fontSize: FontSize.md, fontWeight: "500", color: Colors.text },
   locationCoords: { fontSize: FontSize.xs, color: Colors.textSecondary },
   actions: { gap: Spacing.sm, marginTop: Spacing.md },
+  privacyLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  privacyLinkText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
   deleteAccount: { alignItems: "center", paddingVertical: Spacing.md },
   deleteAccountText: { fontSize: FontSize.sm, color: Colors.danger, textDecorationLine: "underline" },
 });
